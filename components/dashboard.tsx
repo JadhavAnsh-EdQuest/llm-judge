@@ -102,81 +102,119 @@ export function Dashboard() {
     setBusy(true);
     setError(null);
     setReport(null);
-    try {
-      mark("soniox", "running");
-      mark("deepgram", "running");
-      const form = () => {
-        const data = new FormData();
-        data.append("file", file);
-        return data;
+    const form = () => {
+      const data = new FormData();
+      data.append("file", file);
+      return data;
+    };
+
+    async function channel(
+      transcribeId: "soniox" | "deepgram",
+      transcribeUrl: string,
+      summaryId: "sonioxSummary" | "deepgramSummary",
+      summarize: (
+        transcript: string,
+      ) => Promise<{ summary: string }>,
+      setTranscript: (t: TranscriptResult) => void,
+      setSummary: (s: string) => void,
+    ) {
+      mark(transcribeId, "running");
+      const transcribeRes = await fetch(transcribeUrl, {
+        method: "POST",
+        body: form(),
+      });
+      if (!transcribeRes.ok) {
+        mark(transcribeId, "error");
+        throw new Error(
+          `${transcribeId === "soniox" ? "Soniox" : "Deepgram"}: ${await readError(transcribeRes)}`,
+        );
+      }
+      const transcriptJson =
+        (await transcribeRes.json()) as TranscriptResult;
+      setTranscript(transcriptJson);
+      mark(transcribeId, "done");
+
+      mark(summaryId, "running");
+      const summary = await summarize(transcriptJson.transcript);
+      setSummary(summary.summary);
+      mark(summaryId, "done");
+      return {
+        transcript: transcriptJson.transcript,
+        summary: summary.summary,
       };
+    }
 
-      const [sonioxRes, deepgramRes] = await Promise.all([
-        fetch("/api/transcribe/soniox", { method: "POST", body: form() }),
-        fetch("/api/transcribe/deepgram", { method: "POST", body: form() }),
+    try {
+      const [sonioxResult, deepgramResult] = await Promise.allSettled([
+        channel(
+          "soniox",
+          "/api/transcribe/soniox",
+          "sonioxSummary",
+          async (transcript) => {
+            const res = await fetch("/api/summarize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ transcript, source: "soniox" }),
+            });
+            if (!res.ok) {
+              mark("sonioxSummary", "error");
+              throw new Error(`Soniox summary: ${await readError(res)}`);
+            }
+            return (await res.json()) as { summary: string };
+          },
+          setSoniox,
+          setSonioxSummary,
+        ),
+        channel(
+          "deepgram",
+          "/api/transcribe/deepgram",
+          "deepgramSummary",
+          async (transcript) => {
+            const res = await fetch("/api/summarize/granola", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ transcript }),
+            });
+            if (!res.ok) {
+              mark("deepgramSummary", "error");
+              throw new Error(`Deepgram summary: ${await readError(res)}`);
+            }
+            return (await res.json()) as { summary: string };
+          },
+          setDeepgram,
+          setDeepgramSummary,
+        ),
       ]);
 
-      if (!sonioxRes.ok) {
-        mark("soniox", "error");
-        throw new Error(`Soniox: ${await readError(sonioxRes)}`);
+      const errors: string[] = [];
+      if (sonioxResult.status === "rejected") {
+        errors.push(
+          sonioxResult.reason instanceof Error
+            ? sonioxResult.reason.message
+            : "Soniox failed",
+        );
       }
-      if (!deepgramRes.ok) {
-        mark("deepgram", "error");
-        throw new Error(`Deepgram: ${await readError(deepgramRes)}`);
+      if (deepgramResult.status === "rejected") {
+        errors.push(
+          deepgramResult.reason instanceof Error
+            ? deepgramResult.reason.message
+            : "Deepgram failed",
+        );
+      }
+      if (errors.length) {
+        setError(errors.join(" · "));
+        return;
       }
 
-      const sonioxJson = (await sonioxRes.json()) as TranscriptResult;
-      const deepgramJson = (await deepgramRes.json()) as TranscriptResult;
-      setSoniox(sonioxJson);
-      setDeepgram(deepgramJson);
-      mark("soniox", "done");
-      mark("deepgram", "done");
-
-      mark("sonioxSummary", "running");
-      mark("deepgramSummary", "running");
-      const [sumRes, granolaRes] = await Promise.all([
-        fetch("/api/summarize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transcript: sonioxJson.transcript,
-            source: "soniox",
-          }),
-        }),
-        fetch("/api/summarize/granola", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: deepgramJson.transcript }),
-        }),
-      ]);
-      if (!sumRes.ok) {
-        mark("sonioxSummary", "error");
-        throw new Error(`Soniox summary: ${await readError(sumRes)}`);
-      }
-      if (!granolaRes.ok) {
-        mark("deepgramSummary", "error");
-        throw new Error(`Deepgram summary: ${await readError(granolaRes)}`);
-      }
-      const sonioxSum = (await sumRes.json()) as { summary: string };
-      const deepgramSum = (await granolaRes.json()) as { summary: string };
-      setSonioxSummary(sonioxSum.summary);
-      setDeepgramSummary(deepgramSum.summary);
-      mark("sonioxSummary", "done");
-      mark("deepgramSummary", "done");
-
+      const sonioxPair = sonioxResult.value;
+      const deepgramPair = deepgramResult.value;
       mark("judge", "running");
       const judgeRes = await fetch("/api/judge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          soniox: {
-            transcript: sonioxJson.transcript,
-            summary: sonioxSum.summary,
-          },
-          deepgram: {
-            transcript: deepgramJson.transcript,
-            summary: deepgramSum.summary,
-          },
+          soniox: sonioxPair,
+          deepgram: deepgramPair,
         }),
       });
       if (!judgeRes.ok) {
