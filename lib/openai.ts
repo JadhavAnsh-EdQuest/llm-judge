@@ -72,10 +72,6 @@ function stripFence(raw: string) {
   return (fenced?.[1] ?? trimmed).trim();
 }
 
-function judgeModel() {
-  return process.env.OPENAI_JUDGE_MODEL?.trim() || "gpt-5.6-terra";
-}
-
 export async function openaiJson(system: string, user: string) {
   const model =
     process.env.OPENAI_SUMMARY_MODEL?.trim() ||
@@ -102,34 +98,4 @@ export async function openaiJson(system: string, user: string) {
   const content = payload.choices?.[0]?.message?.content?.trim();
   if (!content) throw new Error("OpenAI returned an empty summary");
   return stripFence(content);
-}
-
-export async function openaiJudgeJson<T>(system: string, user: string) {
-  const model = judgeModel();
-  const body: Record<string, unknown> = {
-    model,
-    max_completion_tokens: 2500,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-  };
-  if (model.startsWith("gpt-5") || process.env.OPENAI_REASONING_EFFORT?.trim()) {
-    body.reasoning_effort =
-      process.env.OPENAI_REASONING_EFFORT?.trim() || "medium";
-  }
-
-  const response = await openaiFetch(body);
-  const raw = await response.text();
-  if (!response.ok) {
-    throw new Error(`OpenAI ${response.status}: ${raw.slice(0, 400)}`);
-  }
-
-  const payload = JSON.parse(raw) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const content = payload.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error("OpenAI returned empty judge content");
-  return JSON.parse(stripFence(content)) as T;
 }

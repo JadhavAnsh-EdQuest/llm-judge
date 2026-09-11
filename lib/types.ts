@@ -5,7 +5,8 @@ export type TranscriptResult = {
   transcript: string;
 };
 
-export type SummaryResult = {
+export type PipelinePair = {
+  transcript: string;
   summary: string;
 };
 

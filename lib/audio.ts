@@ -1,3 +1,5 @@
+import { HttpError } from "@/lib/http";
+
 export const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
@@ -12,22 +14,12 @@ const ALLOWED_TYPES = new Set([
   "audio/mp4",
   "audio/m4a",
   "audio/x-m4a",
-  "audio/aac",
   "video/mp4",
   "video/webm",
   "application/octet-stream",
 ]);
 
-const ALLOWED_EXT = /\.(mp3|wav|m4a|aac|ogg|flac|webm|mp4|mpeg)$/i;
-
-export class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+const ALLOWED_EXT = /\.(mp3|wav|m4a|ogg|flac|webm|mp4|mpeg)$/i;
 
 export async function readAudioFile(request: Request) {
   let form: FormData;
@@ -49,12 +41,4 @@ export async function readAudioFile(request: Request) {
   }
   const bytes = Buffer.from(await file.arrayBuffer());
   return { file, bytes, filename: file.name || "audio", type };
-}
-
-export function jsonError(error: unknown) {
-  if (error instanceof HttpError) {
-    return Response.json({ error: error.message }, { status: error.status });
-  }
-  const message = error instanceof Error ? error.message : "Unexpected error";
-  return Response.json({ error: message }, { status: 500 });
 }

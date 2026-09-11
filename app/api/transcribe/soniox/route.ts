@@ -1,4 +1,5 @@
-import { jsonError, readAudioFile } from "@/lib/audio";
+import { readAudioFile } from "@/lib/audio";
+import { jsonError } from "@/lib/http";
 import { transcribeSoniox } from "@/lib/soniox";
 
 export const maxDuration = 300;

@@ -1,15 +1,14 @@
-import { HttpError, jsonError } from "@/lib/audio";
+import { HttpError, jsonError } from "@/lib/http";
 import { runJudge } from "@/lib/judge";
+import type { PipelinePair } from "@/lib/types";
 
 export const maxDuration = 180;
-
-type Pair = { transcript?: string; summary?: string };
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      soniox?: Pair;
-      deepgram?: Pair;
+      soniox?: PipelinePair;
+      deepgram?: PipelinePair;
     };
     const sonioxTranscript = body.soniox?.transcript?.trim();
     const sonioxSummary = body.soniox?.summary?.trim();

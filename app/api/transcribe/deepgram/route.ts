@@ -1,4 +1,5 @@
-import { jsonError, readAudioFile } from "@/lib/audio";
+import { readAudioFile } from "@/lib/audio";
+import { jsonError } from "@/lib/http";
 import { transcribeDeepgram } from "@/lib/deepgram";
 
 export const maxDuration = 300;

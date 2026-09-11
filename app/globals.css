@@ -132,3 +132,91 @@
     @apply font-sans;
   }
 }
+
+/* Broadcast control room atmosphere */
+.broadcast-shell {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--primary) 10%, transparent) 0%,
+      transparent 28%
+    ),
+    radial-gradient(
+      ellipse 90% 50% at 50% 100%,
+      color-mix(in oklch, var(--foreground) 4%, transparent),
+      transparent 70%
+    );
+}
+
+@keyframes broadcast-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 50%, transparent);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@keyframes broadcast-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.live-indicator {
+  animation: broadcast-pulse 2s ease-in-out infinite;
+}
+
+.channel-glow-a {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--channel-a) 45%, transparent),
+    0 0 28px color-mix(in oklch, var(--channel-a) 22%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--channel-a) 12%, transparent);
+}
+
+.channel-glow-b {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--channel-b) 45%, transparent),
+    0 0 28px color-mix(in oklch, var(--channel-b) 22%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--channel-b) 12%, transparent);
+}
+
+.broadcast-scanline {
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in oklch, var(--primary) 6%, transparent) 50%,
+    transparent 100%
+  );
+  animation: broadcast-scan 8s linear infinite;
+  opacity: 0.35;
+}
+
+@supports (view-transition-name: none) {
+  ::view-transition-old(channel-panel),
+  ::view-transition-new(channel-panel) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  ::view-transition-old(judge-verdict),
+  ::view-transition-new(judge-verdict) {
+    animation-duration: 0.45s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-indicator,
+  .broadcast-scanline {
+    animation: none;
+  }
+}

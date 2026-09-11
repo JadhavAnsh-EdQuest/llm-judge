@@ -24,7 +24,7 @@ Granola style:
 - Skip filler, greetings, and repeated agreement.
 - Do not add facts that are not in the transcript.`;
 
-export async function summarizeSoniox(transcript: string) {
+export async function summarizeSoniox(transcript: string, source = "soniox") {
   const provided = process.env.SUMMARIZE_API_URL?.trim();
   if (provided) {
     const headers: Record<string, string> = {
@@ -36,7 +36,7 @@ export async function summarizeSoniox(transcript: string) {
     const res = await fetch(provided, {
       method: "POST",
       headers,
-      body: JSON.stringify({ transcript, source: "soniox" }),
+      body: JSON.stringify({ transcript, source }),
     });
     const raw = await res.text();
     if (!res.ok) {
